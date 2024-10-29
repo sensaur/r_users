@@ -1,0 +1,88 @@
+---
+title: "Illustración del Gradiente de una Función en R"
+---
+
+```{r}
+# Cargar librerías necesarias
+library(ggplot2)
+library(ggquiver) # Para dibujar vectores
+
+# Definir la función
+f <- function(x, y) {
+  x^2 + y^2
+}
+
+# Definir las derivadas parciales (gradiente)
+df_dx <- function(x, y) {
+  2 * x
+}
+df_dy <- function(x, y) {
+  2 * y
+}
+
+# Crear una cuadrícula de puntos
+x_vals <- seq(-3, 3, length.out = 50)
+y_vals <- seq(-3, 3, length.out = 50)
+grid <- expand.grid(x = x_vals, y = y_vals)
+grid$z <- with(grid, f(x, y))
+
+# Graficar la función como un mapa de contorno
+ggplot(grid, aes(x, y, z = z)) +
+  geom_contour_filled() +
+  labs(
+    title = "Mapa de Contorno de f(x, y) = x^2 + y^2",
+    x = "x", y = "y", fill = "Altura"
+  ) +
+  theme_minimal()
+
+# Calcular los valores del gradiente en una cuadrícula de puntos
+grid$dx <- with(grid, df_dx(x, y))
+grid$dy <- with(grid, df_dy(x, y))
+
+# Graficar los vectores de gradiente
+ggplot(grid, aes(x, y)) +
+  geom_contour(aes(z = z), color = "gray70") +
+  geom_quiver(aes(u = dx, v = dy), color = "blue", angle = pi / 10, size = 0.5) +
+  labs(
+    title = "Campo de Vectores de Gradiente de f(x, y) = x^2 + y^2",
+    x = "x", y = "y"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+# Установка пакета plotly, если он ещё не установлен
+# install.packages("plotly")
+
+library(plotly)
+
+# Создание сетки значений для x и y
+x <- seq(-3, 3, length.out = 50)
+y <- seq(-3, 3, length.out = 50)
+z <- outer(x, y, function(x, y) x^2 + y^2)
+
+# Построение 3D-графика
+plot_ly(x = ~x, y = ~y, z = ~z) %>%
+  add_surface() %>%
+  layout(
+    title = "3D-график функции f(x, y) = x^2 + y^2",
+    scene = list(
+      xaxis = list(title = "x"),
+      yaxis = list(title = "y"),
+      zaxis = list(title = "f(x, y)")
+    )
+  )
+```
+
+```{r}
+library(rgl)
+x <- seq(-3, 3, length.out = 50)
+y <- seq(-3, 3, length.out = 50)
+z <- outer(x, y, function(x, y) x^2 + y^2)
+
+# Построение 3D-графика
+persp3d(x, y, z,
+  col = "lightblue", xlab = "x", ylab = "y", zlab = "f(x, y)",
+  main = "3D-график функции f(x, y) = x^2 + y^2"
+)
+```
