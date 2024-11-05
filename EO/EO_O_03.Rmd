@@ -48,7 +48,6 @@ $$
 Теперь проверим наши декларации, вычислив производные с помощью библиотеки `Deriv` в R.
 
 ```{r derivatives, message=FALSE}
-
 # Определяем функцию
 f <- function(x) {
   x^3 + 3 * x^2 - 3 * x + 4
@@ -70,10 +69,9 @@ list(
 Решим уравнение \( \frac{df}{dx} = 0 \) для нахождения критических точек. Подставим найденные значения в \( \frac{d^2f}{dx^2} \), чтобы определить характер критических точек.
 
 ```{r critical-points}
-
 # Находим критические точки
 critical_points <- polyroot(c(-3, 6, 3))
-critical_points_real <- Re(critical_points)  # только действительные части
+critical_points_real <- Re(critical_points) # только действительные части
 
 # Проверка значений второй производной в критических точках
 second_derivative_values <- sapply(critical_points_real, function(x) d2f_dx2(x))
@@ -93,7 +91,6 @@ data.frame(
 Для лучшего понимания поведения функции построим её график вместе с найденными критическими точками.
 
 ```{r plot, echo=FALSE}
-
 # Создаем значения для x и y
 x_vals <- seq(-3, 3, length.out = 100)
 y_vals <- sapply(x_vals, f)
@@ -101,7 +98,7 @@ y_vals <- sapply(x_vals, f)
 # Создаем data.frame для функции и критических точек
 function_data <- data.frame(x = x_vals, y = y_vals)
 critical_points_data <- data.frame(
-  x = critical_points_real, 
+  x = critical_points_real,
   y = sapply(critical_points_real, f)
 )
 
