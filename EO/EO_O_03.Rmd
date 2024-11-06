@@ -1,117 +1,215 @@
 
 ---
-title: "Доказательство локальных минимумов функции"
-output: html_document
+title: "Нахождение минимума функции"
 ---
 
-```{r setup, include=FALSE}
+```{r}
 # Устанавливаем и подключаем pacman (если еще не установлен)
 if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
 library(pacman)
 
 # Проверяем и загружаем необходимые библиотеки с помощью pacman::p_load
-pacman::p_load(Deriv, ggplot2, plotly, viridis)
+pacman::p_load(Deriv, ggplot2, reshape2, plotly, viridis)
 ```
 
 # Введение
 
-В этом упражнении мы найдем и проверим локальные минимумы функции:
+В этом упражнении мы будем искать минимумы функции: $$
+f(x_1, x_2) = x_1^3 + 3 x_1 x_2^2 - 3 x_1^2 - 3 x_2^2 + 4
+$$ 
+
+# Декларация вручную рассчитанных производных
+
+Мы начнём с явной декларации производных, которые мы вычислили вручную.
+
+## Первая производная
 
 $$
-f(x) = x^3 + 3x^2 - 3x + 4
+\frac{\partial f}{\partial x_1} = 3 x_1^2 + 3 x_2^2 - 6 x_1
+$$
+$$
+\frac{\partial f}{\partial x_2} = 6 x_1 x_2 - 6 x_2
 $$
 
-Для нахождения экстремумов функции вычислим её первую и вторую производные, а также проверим значения в критических точках.
-
-# Первая производная
-
-Найдём первую производную функции, чтобы найти её критические точки. Первая производная задаётся как:
+## Вторая производная (матрица Гессиана)
 
 $$
-\frac{df}{dx} = 3x^2 + 6x - 3
+\frac{\partial^2 f}{\partial x_1^2} = 6 x_1 - 6
 $$
-
-Приравнивая первую производную к нулю, находим критические точки функции.
-
-# Вторая производная
-
-Для определения характера критических точек, вычислим вторую производную:
-
 $$
-\frac{d^2f}{dx^2} = 6x + 6
+\frac{\partial^2 f}{\partial x_2^2} = 6 x_1 - 6
 $$
-
-Если значение второй производной положительно в критической точке, то эта точка является минимумом, если отрицательно — максимумом.
+$$
+\frac{\partial^2 f}{\partial x_1 \partial x_2} = \frac{\partial^2 f}{\partial x_2 \partial x_1} = 6 x_2
+$$
 
 # Вычисление производных с помощью библиотеки `Deriv`
 
-Теперь проверим наши декларации, вычислив производные с помощью библиотеки `Deriv` в R.
+Теперь мы проверим наши декларации, вычислив производные с помощью библиотеки `Deriv` в R.
 
-```{r derivatives, message=FALSE}
+```{r, message=FALSE}
 # Определяем функцию
-f <- function(x) {
-  x^3 + 3 * x^2 - 3 * x + 4
+f <- function(x1, x2) {
+  x1^3 + 3 * x1 * x2^2 - 3 * x1^2 - 3 * x2^2 + 4
 }
 
-# Первая и вторая производные
-df_dx <- Deriv(f, "x")
-d2f_dx2 <- Deriv(df_dx, "x")
+# Первая производная по x1 и x2
+df_dx1 <- Deriv(f, "x1")
+df_dx2 <- Deriv(f, "x2")
+
+# Вторая производная по x1 и x2 (матрица Гессиана)
+d2f_dx1_dx1 <- Deriv(df_dx1, "x1")
+d2f_dx2_dx2 <- Deriv(df_dx2, "x2")
+d2f_dx1_dx2 <- Deriv(df_dx1, "x2")
+d2f_dx2_dx1 <- Deriv(df_dx2, "x1")
 
 # Выводим вычисленные производные
 list(
-  Первая_производная = df_dx,
-  Вторая_производная = d2f_dx2
+  df_dx1 = df_dx1,
+  df_dx2 = df_dx2,
+  d2f_dx1_dx1 = d2f_dx1_dx1,
+  d2f_dx2_dx2 = d2f_dx2_dx2,
+  d2f_dx1_dx2 = d2f_dx1_dx2,
+  d2f_dx2_dx1 = d2f_dx2_dx1
 )
 ```
 
-# Проверка значений производных в критических точках
+Сравнение результатов Мы сравним наши вручную рассчитанные производные с результатами, полученными с помощью Deriv. Если они совпадают, это подтвердит корректность наших вычислений.
 
-Решим уравнение \( \frac{df}{dx} = 0 \) для нахождения критических точек. Подставим найденные значения в \( \frac{d^2f}{dx^2} \), чтобы определить характер критических точек.
+```{r}
+# Определяем функцию для проверки равенства двух выражений с выводом аргументов и значений
+compare_expressions <- function(deriv_func, manual_expr, values) {
+  eval_manual <- eval(manual_expr, envir = values)
+  eval_func <- do.call(deriv_func, as.list(values)) # Вызываем функцию с аргументами из values
 
-```{r critical-points}
-# Находим критические точки
-critical_points <- polyroot(c(-3, 6, 3))
-critical_points_real <- Re(critical_points) # только действительные части
+  # Вывод аргументов и значений
+  cat("Аргументы:", "\n")
+  print(values)
+  cat("Ручное вычисление:", eval_manual, "\n")
+  cat("Вычисление с помощью Deriv:", eval_func, "\n")
+  cat("Результат сравнения:", all.equal(eval_func, eval_manual), "\n\n")
 
-# Проверка значений второй производной в критических точках
-second_derivative_values <- sapply(critical_points_real, function(x) d2f_dx2(x))
+  # Возвращаем результат сравнения
+  all.equal(eval_func, eval_manual)
+}
 
-# Выводим результаты
-data.frame(
-  Критические_точки = critical_points_real,
-  Вторая_производная = second_derivative_values,
-  Минимум = second_derivative_values > 0
+# Определяем значения для проверки (например, x1 = 1, x2 = 1)
+values <- list(x1 = 1, x2 = 1)
+
+# Сравниваем производные
+comparison_results <- list(
+  "df_dx1" = compare_expressions(df_dx1, quote(3 * x1^2 + 3 * x2^2 - 6 * x1), values),
+  "df_dx2" = compare_expressions(df_dx2, quote(6 * x1 * x2 - 6 * x2), values),
+  "d2f_dx1_dx1" = compare_expressions(d2f_dx1_dx1, quote(6 * x1 - 6), values),
+  "d2f_dx2_dx2" = compare_expressions(d2f_dx2_dx2, quote(6 * x1 - 6), values),
+  "d2f_dx1_dx2" = compare_expressions(d2f_dx1_dx2, quote(6 * x2), values),
+  "d2f_dx2_dx1" = compare_expressions(d2f_dx2_dx1, quote(6 * x2), values)
 )
 ```
 
-В результате таблицы видно, какие из критических точек являются локальными минимумами (где вторая производная положительна).
+Визуализация функции Для лучшего понимания функции построим контурный график.
 
-# Визуализация функции
+```{r}
+# Создаем сетку значений для x1 и x2
+x1_vals <- seq(-2, 2, length.out = 100)
+x2_vals <- seq(-2, 2, length.out = 100)
+z <- outer(x1_vals, x2_vals, f)
+z_df <- melt(z)
+names(z_df) <- c("x1", "x2", "f_value")
+z_df$x1 <- x1_vals[z_df$x1]
+z_df$x2 <- x2_vals[z_df$x2]
 
-Для лучшего понимания поведения функции построим её график вместе с найденными критическими точками.
-
-```{r plot, echo=FALSE}
-# Создаем значения для x и y
-x_vals <- seq(-3, 3, length.out = 100)
-y_vals <- sapply(x_vals, f)
-
-# Создаем data.frame для функции и критических точек
-function_data <- data.frame(x = x_vals, y = y_vals)
-critical_points_data <- data.frame(
-  x = critical_points_real,
-  y = sapply(critical_points_real, f)
-)
-
-# График функции с критическими точками
-ggplot(function_data, aes(x = x, y = y)) +
-  geom_line(color = "blue") +
-  geom_point(data = critical_points_data, aes(x = x, y = y), color = "red", size = 2) +
-  labs(title = "График функции f(x) = x^3 + 3x^2 - 3x + 4", x = "x", y = "f(x)") +
+# Контурный график
+base_plot <- ggplot(z_df, aes(x = x1, y = x2, fill = f_value, text = paste("x1:", round(x1, 2), "<br>x2:", round(x2, 2), "<br>f_value:", round(f_value, 4)))) +
+  geom_tile() +
+  scale_fill_viridis(option = "D") +
+  labs(
+    title = "Контурный график функции",
+    x = "x1",
+    y = "x2",
+    fill = "f(x1, x2)"
+  ) +
   theme_minimal()
+
+# Преобразуем график в интерактивный plotly объект
+interactive_plot <- ggplotly(base_plot, tooltip = "text")
+
+# Отображаем интерактивный график
+interactive_plot
 ```
 
-# Выводы
+```{r}
+# Устанавливаем и подключаем пакет rootSolve, если он еще не установлен
+if (!requireNamespace("rootSolve", quietly = TRUE)) install.packages("rootSolve")
+library(rootSolve)
 
-На основе анализа производных и визуализации мы определили, что критические точки функции \( f(x) = x^3 + 3x^2 - 3x + 4 \) соответствуют локальным минимумам, так как в этих точках вторая производная положительна.
+# Определяем функцию f для нахождения критических точек
+f <- function(x) {
+  x1 <- x[1]
+  x2 <- x[2]
+  x1^3 + 3 * x1 * x2^2 - 3 * x1^2 - 3 * x2^2 + 4
+}
 
-Таким образом, мы успешно подтвердили, что эти точки являются локальными минимумами функции.
+# Определяем первые производные функции
+grad_f <- function(x) {
+  x1 <- x[1]
+  x2 <- x[2]
+  c(
+    3 * x1^2 + 3 * x2^2 - 6 * x1, # производная по x1
+    6 * x1 * x2 - 6 * x2 # производная по x2
+  )
+}
+
+# Определяем Гессиан для проверки
+hessian <- function(x) {
+  x1 <- x[1]
+  x2 <- x[2]
+  matrix(c(
+    6 * x1 - 6, 6 * x2,
+    6 * x2, 6 * x1 - 6
+  ), nrow = 2, ncol = 2, byrow = TRUE)
+}
+
+# Функция для нахождения и классификации критических точек
+find_critical_points <- function() {
+  # Начальные точки для поиска корней
+  initial_points <- list(c(-1, -1), c(1, 1), c(0, 0))
+  results <- data.frame(x1 = numeric(), x2 = numeric(), min_or_max = character(), f_value = numeric())
+
+  for (point in initial_points) {
+    root_result <- tryCatch(
+      multiroot(f = grad_f, start = point),
+      error = function(e) NULL
+    )
+
+    if (!is.null(root_result)) {
+      critical_point <- root_result$root
+      f_value <- f(critical_point) # Вычисляем значение функции в критической точке
+
+      # Проверка Гессиана
+      eigen_values <- eigen(hessian(critical_point))$values
+
+      if (all(eigen_values > 0)) {
+        min_or_max <- "local_minimum"
+      } else if (all(eigen_values < 0)) {
+        min_or_max <- "local_maximum"
+      } else {
+        min_or_max <- "saddle_point"
+      }
+
+      # Добавляем критическую точку и её характеристику в результаты
+      results <- rbind(results, data.frame(
+        x1 = critical_point[1],
+        x2 = critical_point[2],
+        min_or_max = min_or_max,
+        f_value = f_value
+      ))
+    }
+  }
+  return(results)
+}
+
+# Запуск функции и вывод результатов
+critical_points_results <- find_critical_points()
+print(critical_points_results)
+```
